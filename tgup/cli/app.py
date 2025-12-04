@@ -63,9 +63,9 @@ def status():
 @app.command("up")
 def upload(
     source: str = typer.Argument(..., help="Channel/chat"),
-    limit: int = typer.Option(100, "-l"),
-    reverse: bool = typer.Option(False, "-r"),
-    filter_type: str = typer.Option("all", "-f", help="all/video/photo"),
+    limit: int = typer.Option(100, "-l", "--limit"),
+    reverse: bool = typer.Option(False, "-r", "--reverse"),
+    filter_type: str = typer.Option("all", "-f", "--filter", help="all/video/photo"),
     min_res: int = typer.Option(None, "--min-res"),
     min_dur: int = typer.Option(None, "--min-dur"),
     flat: bool = typer.Option(False, "--flat"),
@@ -98,7 +98,11 @@ def upload(
         await storage.start()
         
         # Options
-        media_filter = {"all": MediaFilter.ALL, "video": MediaFilter.VIDEO, "photo": MediaFilter.PHOTO}
+        media_filter = {
+            "all": MediaFilter.ALL, 
+            "video": MediaFilter.VIDEO, "videos": MediaFilter.VIDEO,
+            "photo": MediaFilter.PHOTO, "photos": MediaFilter.PHOTO,
+        }
         entity = await tg._client.get_entity(source)
         channel = getattr(entity, 'username', None) or str(entity.id)
         dest = "/Telegram" if flat else f"/Telegram/{channel}"
