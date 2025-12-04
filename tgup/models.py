@@ -15,6 +15,7 @@ class Media:
     media_type: MediaType
     file_size: int = 0
     filename: str | None = None
+    mime_type: str | None = None
     width: int | None = None
     height: int | None = None
     duration: int | None = None
@@ -22,13 +23,30 @@ class Media:
     
     @property
     def download_name(self) -> str:
-        """Generate download filename."""
+        """Generate filename: {msg_id}_{date}_{original}.ext or {msg_id}_{date}.ext"""
         date_str = self.date.strftime("%d%m%Y")
         base = f"{self.message_id}_{date_str}"
+        
         if self.filename:
-            return f"{base}_{self.filename}"
-        ext = ".mp4" if self.media_type == MediaType.VIDEO else ".jpg"
-        return f"{base}{ext}"
+            # Extract name and extension from original filename
+            from pathlib import Path
+            p = Path(self.filename)
+            name = p.stem
+            ext = p.suffix or self._guess_ext()
+            return f"{base}_{name}{ext}"
+        
+        return f"{base}{self._guess_ext()}"
+    
+    def _guess_ext(self) -> str:
+        """Guess extension from mime or type."""
+        if self.mime_type:
+            ext_map = {
+                "video/mp4": ".mp4", "video/webm": ".webm", "video/quicktime": ".mov",
+                "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp",
+            }
+            return ext_map.get(self.mime_type, ".mp4")
+        
+        return ".mp4" if self.media_type == MediaType.VIDEO else ".jpg"
 
 
 @dataclass

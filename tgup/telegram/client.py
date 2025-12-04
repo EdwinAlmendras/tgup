@@ -80,6 +80,7 @@ class TelegramClient:
                 media_type=MediaType.VIDEO if is_video else MediaType.DOCUMENT,
                 file_size=doc.size,
                 filename=filename_attr.file_name if filename_attr else None,
+                mime_type=doc.mime_type,
                 width=video_attr.w if video_attr else None,
                 height=video_attr.h if video_attr else None,
                 duration=video_attr.duration if video_attr else None,
@@ -106,17 +107,27 @@ class TelegramClient:
         """Download media using FastTelethon (parallel download)."""
         dest_dir.mkdir(parents=True, exist_ok=True)
         
+        # Target file path with proper name
+        target_path = dest_dir / media.download_name
+        
         msg = await self._client.get_messages(media.chat_id, ids=media.message_id)
         
-        # Use FastTelethon for parallel download
-        file_path = await fast_download(
+        # Download to temp then rename (FastTelethon uses its own naming)
+        temp_folder = str(dest_dir) + "/"
+        
+        downloaded_path = await fast_download(
             client=self._client,
             msg=msg,
             reply=None,
-            download_folder=str(dest_dir),
-            progress_bar_function=progress_cb,
+            download_folder=temp_folder,
+            progress_callback=progress_cb,
         )
         
-        log.info(f"Downloaded: {Path(file_path).name}")
-        return Path(file_path)
+        # Rename to our naming convention
+        downloaded = Path(downloaded_path)
+        if downloaded.exists() and downloaded != target_path:
+            downloaded.rename(target_path)
+        
+        log.info(f"Downloaded: {target_path.name}")
+        return target_path
 
