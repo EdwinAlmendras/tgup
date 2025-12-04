@@ -4,10 +4,12 @@ from typing import AsyncIterator, Callable
 from pathlib import Path
 from telethon import TelegramClient as Telethon
 from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
+from FastTelethonhelper import fast_download
 from ..config import session_path, MediaType, MediaFilter
 from ..models import Media
 
 log = logging.getLogger(__name__)
+logging.getLogger("FastTelethon").setLevel(logging.WARNING)
 
 
 class TelegramClient:
@@ -101,13 +103,20 @@ class TelegramClient:
         dest_dir: Path,
         progress_cb: Callable[[int, int], None] | None = None
     ) -> Path:
-        """Download media to file."""
+        """Download media using FastTelethon (parallel download)."""
         dest_dir.mkdir(parents=True, exist_ok=True)
-        file_path = dest_dir / media.download_name
         
         msg = await self._client.get_messages(media.chat_id, ids=media.message_id)
-        await self._client.download_media(msg, file_path, progress_callback=progress_cb)
         
-        log.info(f"Downloaded: {file_path.name}")
-        return file_path
+        # Use FastTelethon for parallel download
+        file_path = await fast_download(
+            client=self._client,
+            msg=msg,
+            reply=None,
+            download_folder=str(dest_dir),
+            progress_bar_function=progress_cb,
+        )
+        
+        log.info(f"Downloaded: {Path(file_path).name}")
+        return Path(file_path)
 
