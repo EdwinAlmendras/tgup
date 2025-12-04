@@ -60,7 +60,7 @@ class TelegramClient:
             return Media(
                 message_id=msg.id,
                 chat_id=msg.chat_id,
-                date=msg.date,
+                date=msg.photo.date,
                 media_type=MediaType.PHOTO,
                 file_size=msg.media.photo.sizes[-1].size if msg.media.photo.sizes else 0,
             )
@@ -76,7 +76,7 @@ class TelegramClient:
             return Media(
                 message_id=msg.id,
                 chat_id=msg.chat_id,
-                date=msg.date,
+                date=doc.date,
                 media_type=MediaType.VIDEO if is_video else MediaType.DOCUMENT,
                 file_size=doc.size,
                 filename=filename_attr.file_name if filename_attr else None,
