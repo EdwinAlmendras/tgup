@@ -57,12 +57,22 @@ class TelegramClient:
             return None
         
         if isinstance(msg.media, MessageMediaPhoto):
+            # Get photo size - handle different size types
+            photo_size = 0
+            if msg.media.photo.sizes:
+                last_size = msg.media.photo.sizes[-1]
+                # PhotoSize has .size, PhotoSizeProgressive has .sizes list
+                if hasattr(last_size, 'size'):
+                    photo_size = last_size.size
+                elif hasattr(last_size, 'sizes') and last_size.sizes:
+                    photo_size = last_size.sizes[-1]
+            
             return Media(
                 message_id=msg.id,
                 chat_id=msg.chat_id,
                 date=msg.photo.date,
                 media_type=MediaType.PHOTO,
-                file_size=msg.media.photo.sizes[-1].size if msg.media.photo.sizes else 0,
+                file_size=photo_size,
             )
         
         if isinstance(msg.media, MessageMediaDocument):
