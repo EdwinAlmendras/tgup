@@ -30,6 +30,8 @@ class PipelineCallbacks:
     on_upload: Callable[[Media, str], None] | None = None
     on_skip: Callable[[Media, str], None] | None = None
     on_error: Callable[[Media, str], None] | None = None
+    on_download_progress: Callable[[int, int], None] | None = None
+    on_upload_progress: Callable[[int, int], None] | None = None
 
 
 class Pipeline:
@@ -83,8 +85,8 @@ class Pipeline:
                     self._notify("on_skip", media, "duplicate")
                     continue
             
-            # Skip existing
-            if media.download_name in self._existing:
+            # Skip existing in MEGA (checks all accounts)
+            if await self._file_exists_in_mega(media.download_name):
                 self.stats.skipped += 1
                 self._notify("on_skip", media, "exists")
                 continue
@@ -92,7 +94,10 @@ class Pipeline:
             # Download and queue
             self._notify("on_start", media)
             try:
-                file_path = await self._tg.download(media, config_dir() / "downloads")
+                progress_cb = None
+                if self._cb.on_download_progress:
+                    progress_cb = lambda c, t: self._cb.on_download_progress(c, t)
+                file_path = await self._tg.download(media, config_dir() / "downloads", progress_cb)
                 self.stats.downloaded += 1
                 self._notify("on_download", media)
                 await queue.put((media, file_path))
@@ -141,22 +146,45 @@ class Pipeline:
             telegram_document_id=media.document_id,
         )
         
+        progress_cb = None
+        if self._cb.on_upload_progress:
+            def progress_cb(p):
+                self._cb.on_upload_progress(p.uploaded_bytes, p.total_bytes)
+        
         result = await self._uploader.upload_telegram(
             file_path,
             telegram_info=info,
             dest=self._options.dest_folder,
+            progress_callback=progress_cb,
         )
         return result.source_id if result.success else None
     
     async def _load_existing_files(self):
-        """Load existing filenames from MEGA."""
+        """Load existing filenames from MEGA (all accounts)."""
         try:
             if hasattr(self._mega, 'list_all'):
                 items = await self._mega.list_all(self._options.dest_folder)
                 self._existing = {node.name for _, node in items}
-            log.info(f"Found {len(self._existing)} existing files")
+                log.info(f"Found {len(self._existing)} existing files")
         except Exception as e:
             log.warning(f"Could not load existing files: {e}")
+    
+    async def _file_exists_in_mega(self, filename: str) -> bool:
+        """Check if file exists in any MEGA account."""
+        # First check cache
+        if filename in self._existing:
+            return True
+        
+        # Then check via API (slower but catches files added during run)
+        full_path = f"{self._options.dest_folder}/{filename}"
+        try:
+            if hasattr(self._mega, 'exists'):
+                if await self._mega.exists(full_path):
+                    self._existing.add(filename)
+                    return True
+        except Exception:
+            pass
+        return False
     
     def _should_skip(self, media: Media) -> bool:
         """Check filter criteria."""

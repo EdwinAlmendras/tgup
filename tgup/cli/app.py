@@ -10,7 +10,12 @@ from ..telegram import TelegramClient, TelegramSession
 from ..services import DuplicateChecker
 from ..pipeline import Pipeline, PipelineCallbacks
 
-logging.basicConfig(level=logging.INFO, format="%(message)s")
+# Silence noisy loggers
+logging.basicConfig(level=logging.WARNING, format="%(message)s")
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("telethon").setLevel(logging.WARNING)
+logging.getLogger("megapy").setLevel(logging.WARNING)
 log = logging.getLogger(__name__)
 
 app = typer.Typer(help="Telegram to MEGA uploader")
@@ -120,21 +125,17 @@ def upload(
         console.print(f"[cyan]Source:[/cyan] {source}")
         console.print(f"[cyan]Dest:[/cyan] {dest}")
         
-        # Display
+        # Display with progress callbacks
         display = Display()
         
-        def on_start(m): display.set_current(m.download_name)
-        def on_download(m): display.set_current(f"↑ {m.download_name}")
-        def on_upload(m, sid): display.log_upload(sid)
-        def on_skip(m, r): display.log_skip(m.download_name, r)
-        def on_error(m, e): display.log_error(e)
-        
         callbacks = PipelineCallbacks(
-            on_start=on_start,
-            on_download=on_download,
-            on_upload=on_upload,
-            on_skip=on_skip,
-            on_error=on_error,
+            on_start=lambda m: display.start_download(m.download_name, m.file_size or 0),
+            on_download=lambda m: (display.finish_download(), display.start_upload(m.download_name, m.file_size or 0)),
+            on_upload=lambda m, sid: display.finish_upload(sid),
+            on_skip=lambda m, r: display.skip(m.download_name, r),
+            on_error=lambda m, e: display.error(e),
+            on_download_progress=lambda c, t: display.update_download(c, t),
+            on_upload_progress=lambda c, t: display.update_upload(c, t),
         )
         
         try:
