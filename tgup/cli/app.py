@@ -111,7 +111,16 @@ def upload(
             "photo": MediaFilter.PHOTO, "photos": MediaFilter.PHOTO,
         }
         entity = await tg._client.get_entity(source)
-        channel = getattr(entity, 'username', None) or str(entity.id)
+        
+        def get_properly_name(entity):
+            if getattr(entity, 'username', None):
+                return entity.username
+            elif getattr(entity, 'title', None):
+                return entity.title
+            else:
+                return str(entity.id)
+        
+        channel = get_properly_name(entity)
         dest = "/Telegram" if flat else f"/Telegram/{channel}"
         
         options = DownloadOptions(
