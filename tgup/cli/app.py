@@ -1,5 +1,6 @@
 """CLI commands - thin layer, delegates to services."""
 import logging
+from typing import Union
 import typer
 from pathlib import Path
 from rich.console import Console
@@ -67,7 +68,7 @@ def status():
 
 @app.command("up")
 def upload(
-    source: str = typer.Argument(..., help="Channel/chat"),
+    source: Union[str, int] = typer.Argument(..., help="Channel/chat"),
     limit: int = typer.Option(100, "-l", "--limit"),
     reverse: bool = typer.Option(False, "-r", "--reverse"),
     filter_type: str = typer.Option("all", "-f", "--filter", help="all/video/photo"),
@@ -80,6 +81,11 @@ def upload(
     import os
     
     async def do_upload():
+        nonlocal source
+        try:
+            source = int(source)
+        except ValueError:
+            pass
         from uploader import UploadOrchestrator, ManagedStorageService
         
         # Load config
@@ -104,11 +110,6 @@ def upload(
             "video": MediaFilter.VIDEO, "videos": MediaFilter.VIDEO,
             "photo": MediaFilter.PHOTO, "photos": MediaFilter.PHOTO,
         }
-        try:
-            source = int(source)
-        except ValueError:
-            pass
-        
         entity = await tg._client.get_entity(source)
         channel = getattr(entity, 'username', None) or str(entity.id)
         dest = "/Telegram" if flat else f"/Telegram/{channel}"
