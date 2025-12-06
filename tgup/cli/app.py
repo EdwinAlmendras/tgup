@@ -96,56 +96,19 @@ def upload(
         if not await tg.start():
             console.print("[red]Session expired. Run: tgup login[/red]")
             raise typer.Exit(1)
-        
-        # Connect MEGA
-        sessions_dir = Path.home() / ".config" / "mega" / "sessions"
-        storage = ManagedStorageService(sessions_dir=sessions_dir if sessions_dir.exists() else None)
-        await storage.start()
-        
-        # Check if all accounts have less than 1GB free and create new one if needed
-        MIN_FREE_SPACE_GB = 1
-        MIN_FREE_SPACE_BYTES = MIN_FREE_SPACE_GB * 1024 * 1024 * 1024
-        
-        manager = storage.manager
-        active_accounts = manager.active_accounts
-        
-        if active_accounts:
-            all_accounts_low_space = all(
-                account.space_free < MIN_FREE_SPACE_BYTES 
-                for account in active_accounts
-            )
-            
-            if all_accounts_low_space:
-                console.print(f"\n[yellow]⚠️  All accounts have less than {MIN_FREE_SPACE_GB}GB free space.[/yellow]")
-                console.print("[cyan]Creating a new MEGA account...[/cyan]")
-                
-                try:
-                    from mega_account import AccountManager
-                    # Create new session using the manager
-                    new_account = await manager.create_new_session()
-                    console.print(f"[green]✓ Created new account: {new_account.name}[/green]")
-                    console.print(f"[dim]Free space: {new_account.space_free_gb:.2f} GB[/dim]\n")
-                except Exception as e:
-                    console.print(f"[red]Failed to create new account: {e}[/red]")
-                    console.print("[yellow]Continuing with existing accounts...[/yellow]\n")
-        else:
-            # No accounts found, create one
-            console.print("\n[yellow]⚠️  No MEGA accounts found.[/yellow]")
-            console.print("[cyan]Creating a new MEGA account...[/cyan]")
-            try:
-                new_account = await manager.create_new_session()
-                console.print(f"[green]✓ Created new account: {new_account.name}[/green]")
-                console.print(f"[dim]Free space: {new_account.space_free_gb:.2f} GB[/dim]\n")
-            except Exception as e:
-                console.print(f"[red]Failed to create new account: {e}[/red]")
-                raise typer.Exit(1)
-        
+        storage = ManagedStorageService()
+        await storage.check_accounts_space()
         # Options
         media_filter = {
             "all": MediaFilter.ALL, 
             "video": MediaFilter.VIDEO, "videos": MediaFilter.VIDEO,
             "photo": MediaFilter.PHOTO, "photos": MediaFilter.PHOTO,
         }
+        try:
+            source = int(source)
+        except ValueError:
+            pass
+        
         entity = await tg._client.get_entity(source)
         channel = getattr(entity, 'username', None) or str(entity.id)
         dest = "/Telegram" if flat else f"/Telegram/{channel}"
