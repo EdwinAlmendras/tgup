@@ -68,7 +68,7 @@ def status():
 
 @app.command("up")
 def upload(
-    source: Union[str, int] = typer.Argument(..., help="Channel/chat"),
+    source: str = typer.Argument(..., help="Channel/chat"),
     limit: int = typer.Option(100, "-l", "--limit"),
     reverse: bool = typer.Option(False, "-r", "--reverse"),
     filter_type: str = typer.Option("all", "-f", "--filter", help="all/video/photo"),
