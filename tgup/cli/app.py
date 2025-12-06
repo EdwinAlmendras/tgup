@@ -72,8 +72,8 @@ def upload(
     limit: int = typer.Option(100, "-l", "--limit"),
     reverse: bool = typer.Option(False, "-r", "--reverse"),
     filter_type: str = typer.Option("all", "-f", "--filter", help="all/video/photo"),
-    min_res: int = typer.Option(None, "--min-res"),
-    min_dur: int = typer.Option(None, "--min-dur"),
+    min_res: int = typer.Option(0, "--min-res"),
+    min_dur: int = typer.Option(0, "--min-dur"),
     flat: bool = typer.Option(False, "--flat"),
 ):
     """Download from Telegram, upload to MEGA."""
