@@ -75,6 +75,7 @@ def upload(
     min_res: int = typer.Option(0, "--min-res"),
     min_dur: int = typer.Option(0, "--min-dur"),
     flat: bool = typer.Option(False, "--flat"),
+    collection: str = typer.Option(None, "-c", "--collection", help="Collection name"),
 ):
     """Download from Telegram, upload to MEGA."""
     import asyncio
@@ -102,7 +103,7 @@ def upload(
         if not await tg.start():
             console.print("[red]Session expired. Run: tgup login[/red]")
             raise typer.Exit(1)
-        storage = ManagedStorageService()
+        storage = ManagedStorageService(collection_name=collection)
         await storage.check_accounts_space()
         # Options
         media_filter = {
@@ -131,6 +132,7 @@ def upload(
             min_resolution=min_res,
             min_duration=min_dur,
             dest_folder=dest,
+            collection=collection,
         )
         
         console.print(f"[cyan]Source:[/cyan] {source}")

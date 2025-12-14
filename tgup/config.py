@@ -43,6 +43,7 @@ class DownloadOptions:
     min_resolution: int | None = None
     min_duration: int | None = None
     dest_folder: str = "/Telegram"
+    collection: str | None = None
 
 
 # Paths
