@@ -23,19 +23,12 @@ class Media:
     
     @property
     def download_name(self) -> str:
-        """Generate filename: {msg_id}_{date}_{original}.ext or {msg_id}_{date}.ext"""
-        date_str = self.date.strftime("%d%m%Y")
-        base = f"{self.message_id}_{date_str}"
-        
+        """Generate filename: original name or {date}_{time}.ext"""
         if self.filename:
-            # Extract name and extension from original filename
-            from pathlib import Path
-            p = Path(self.filename)
-            name = p.stem
-            ext = p.suffix or self._guess_ext()
-            return f"{base}_{name}{ext}"
-        
-        return f"{base}{self._guess_ext()}"
+            return self.filename
+            
+        date_str = self.date.strftime("%Y%m%d_%H%M%S")
+        return f"{date_str}{self._guess_ext()}"
     
     def _guess_ext(self) -> str:
         """Guess extension from mime or type."""
